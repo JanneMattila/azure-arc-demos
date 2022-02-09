@@ -138,5 +138,5 @@ az monitor log-analytics query \
   --out table
 
 # Wipe out the resources
-az connectedk8s delete --name $arcName --resource-group $resourceGroupName
+az connectedk8s delete --name $arcName --resource-group $resourceGroupName -y
 az group delete --name $resourceGroupName -y

@@ -4,7 +4,9 @@ metadata:
   name: webapp-monitoring-demo
   namespace: demos
 spec:
+  type: NodePort
   ports:
   - port: 80
+    nodePort: 30080
   selector:
     app: webapp-monitoring-demo

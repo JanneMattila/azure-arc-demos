@@ -5,11 +5,6 @@ Param (
 
 $ErrorActionPreference = "Stop"
 
-class VMInstallationStatus {
-    [string] $VirtualMachine
-    [string] $Status
-}
-
 $installedModule = Get-Module -Name "Az.ConnectedMachine" -ListAvailable
 if ($null -eq $installedModule) {
     Install-Module "Az.ConnectedMachine" -Scope CurrentUser
@@ -27,11 +22,11 @@ $publicSettings = @{
 
 $protectedSettings = @{ 
     "fileUris" = @(
-        "https://github.com/JanneMattila/azure-arc-demos/blob/main/servers/install.sh"
+        "https://raw.githubusercontent.com/JanneMattila/azure-arc-demos/main/servers/install.sh"
     )
 }
 
-$list = New-Object Collections.Generic.List[VMInstallationStatus]
+$jobs = @()
 
 $linuxArcVMs = Get-AzConnectedMachine -ResourceGroupName $ResourceGroup
 $linuxArcVMs | Format-Table
@@ -39,32 +34,38 @@ $forceRerun = (Get-Date).ToString("yyyyMMddHHmmss")
 
 foreach ($linuxArcVM in $linuxArcVMs) {
     if ($linuxArcVM.OSName -eq "linux") {
-
-        $vmInstallationStatus = New-Object VMInstallationStatus
-        $vmInstallationStatus.VirtualMachine = $linuxArcVM.Name
-        $vmInstallationStatus.Status = "Not started"
+        Write-Host "Starting deployment for $($linuxArcVM.Name)"
 
         # https://docs.microsoft.com/en-us/azure/azure-arc/servers/manage-vm-extensions-powershell#enable-extension
         # https://docs.microsoft.com/en-us/powershell/module/az.connectedmachine/new-azconnectedmachineextension?view=azps-7.2.0
 
-        try {
-            $extension = New-AzConnectedMachineExtension -Name "custom" `
-                -ResourceGroupName $ResourceGroup `
-                -MachineName $linuxArcVM.Name `
-                -Location $linuxArcVM.Location `
-                -Publisher "Microsoft.Compute" `
-                -Settings $publicSettings `
-                -ProtectedSetting $protectedSettings `
-                -ForceRerun $forceRerun `
-                -ExtensionType CustomScriptExtension
-            $vmInstallationStatus.Status = $extension.StatusDisplayStatus
-        }
-        catch {
-            $vmInstallationStatus.Status = $_
-        }
-        $list.Add($vmInstallationStatus)
+        # For troubleshooting:
+        # https://docs.microsoft.com/en-us/azure/azure-arc/servers/troubleshoot-vm-extensions
+        # Logs:
+        # /var/opt/azcmagent
+        # /var/lib/GuestConfig
+
+        $jobs += New-AzConnectedMachineExtension -Name "customDeployment" `
+            -ResourceGroupName $ResourceGroup `
+            -MachineName $linuxArcVM.Name `
+            -Location $linuxArcVM.Location `
+            -Publisher "Microsoft.Azure.Extensions" `
+            -Settings $publicSettings `
+            -ProtectedSetting $protectedSettings `
+            -ForceRerun $forceRerun `
+            -ExtensionType CustomScript `
+            -AutoUpgradeMinorVersion `
+            -NoWait `
+            -AsJob
     }
 }
 
-$list | Export-Csv -Path "DeployedExtensions.csv" -NoTypeInformation
-$list | Format-Table
+Write-Host "Waiting for all deployment jobs to complete."
+
+$jobs
+$outputs = $jobs | Get-Job | Wait-Job | Receive-Job 
+$outputs | Format-Table -AutoSize
+$outputs | Export-Csv -Path "ExtensionOutputs.csv" -NoTypeInformation
+
+# If you need to clean up jobs, here's example command:
+# Get-Job | Remove-Job -Force

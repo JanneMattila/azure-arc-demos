@@ -17,3 +17,5 @@ Azure Arc Demos
 [Azure Arc-enabled data services - Connectivity modes and requirements](https://learn.microsoft.com/en-us/azure/azure-arc/data/connectivity)
 
 [Azure Arc-enabled Kubernetes network requirements](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/network-requirements)
+
+[Define Azure Monitor Agent network settings](https://learn.microsoft.com/en-us/azure/azure-monitor/agents/azure-monitor-agent-data-collection-endpoint)

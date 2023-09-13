@@ -54,9 +54,14 @@ $nsg | Set-AzNetworkSecurityGroup
 $pip = Get-AzPublicIpAddress -ResourceGroupName $resourceGroupName -Name "HCIBox-Client-PIP"
 $pip.IpAddress
 
-
 $configuration.parameters.windowsAdminUsername.value
 $configuration.parameters.windowsAdminPassword.value
 $configuration.parameters.windowsAdminPassword.value | clip
 
-mstsc /v:$($pip.IpAddress) 
+mstsc /v:$($pip.IpAddress)
+
+# To save costs, you can shutdown the VM
+Stop-AzVM -ResourceGroupName $resourceGroupName -Name "HCIBox-Client" -Force
+
+# Remove the resource group
+Remove-AzResourceGroup -Name $resourceGroupName -Force

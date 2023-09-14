@@ -63,5 +63,8 @@ mstsc /v:$($pip.IpAddress)
 # To save costs, you can shutdown the VM
 Stop-AzVM -ResourceGroupName $resourceGroupName -Name "HCIBox-Client" -Force
 
+# Resume demo environment
+Start-AzVM -ResourceGroupName $resourceGroupName -Name "HCIBox-Client"
+
 # Remove the resource group
 Remove-AzResourceGroup -Name $resourceGroupName -Force

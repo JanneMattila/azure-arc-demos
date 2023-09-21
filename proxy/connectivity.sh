@@ -24,16 +24,16 @@ az storage share create \
 STORAGE_KEY=$(az storage account keys list --resource-group $RESOURCE_GROUP --account-name $STORAGE_NAME --query "[0].value" --output tsv)
 echo $STORAGE_KEY
 
-COMMAND_LINE="mitmweb --web-host 0.0.0.0 --save-stream +/home/mitmproxy/%Y/%m/%d/%H-%M-proxy.log"
-COMMAND_LINE="mitmdump --w +/home/mitmproxy/proxy.log --flow-detail 3 --set stream_websocket=true"
+COMMAND_LINE="mitmweb --web-host 0.0.0.0 --save-stream +/home/mitmproxy/%Y/%m/%d/%H-%M-proxy.log --set confdir=/home/mitmproxy"
+# COMMAND_LINE="mitmdump --w +/home/mitmproxy/proxy.log --flow-detail 3 --set stream_websocket=true"
 
 aci_json=$(az container create \
   --resource-group $RESOURCE_GROUP \
   --name $ACI_NAME \
   --image mitmproxy/mitmproxy:10.0.0 \
   --command-line "$COMMAND_LINE" \
-  --cpu 1 \
-  --memory 1 \
+  --cpu 2 \
+  --memory 2 \
   --ports 8080 8081 \
   --ip-address public \
   --restart-policy Always \
@@ -48,7 +48,6 @@ az container logs --name $ACI_NAME --resource-group $RESOURCE_GROUP --follow
 
 echo $aci_json | jq .
 
-# Get the IP address of the container group
 ip_address=$(echo $aci_json | jq -r '.ipAddress.ip')
 echo $ip_address
 
@@ -58,8 +57,8 @@ curl http://$ip_address:8081
 # Open the web UI
 echo http://$ip_address:8081
 
-http_proxy=http://$ip_address:8080/ curl http://echo.jannemattila.com/pages/echo
-https_proxy=http://$ip_address:8080/ curl -k https://echo.jannemattila.com/pages/echo
+http_proxy=http://$ip_address:8080/ curl http://echo.jannemattila.com/pages/echo --verbose
+https_proxy=http://$ip_address:8080/ curl -k https://echo.jannemattila.com/pages/echo --verbose
 
 # Cleanup ACI
 az container delete --name $ACI_NAME --resource-group $RESOURCE_GROUP --yes

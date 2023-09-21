@@ -20,3 +20,11 @@ https_proxy=http://localhost:8080/ curl -k https://echo.jannemattila.com/pages/e
 # https://mitmproxy.org/downloads/#10.0.0/
 mitmdump -r proxy.log --flow-detail 3 > proxy.txt
 tail -f proxy.log | mitmproxy --rfile - -n
+
+# Set up proxy for browsers:
+chrome --proxy-server="localhost:8080" http://mitm.it
+msedge --proxy-server="localhost:8080" http://mitm.it
+
+# ->
+# chrome://settings/certificates
+# edge://settings/profiles

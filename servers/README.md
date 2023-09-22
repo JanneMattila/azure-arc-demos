@@ -10,12 +10,16 @@ try {
     $servicePrincipalClientId="<ENTER ID HERE>";
     $servicePrincipalSecret="<ENTER SECRET HERE>";
 
-    $env:SUBSCRIPTION_ID = "3ca5f54c-9e15-45e3-9be8-e922be122c24";
+    $env:SUBSCRIPTION_ID = "6eccf8a5-bc2d-448b-bf79-8d5df172c56a";
     $env:RESOURCE_GROUP = "rg-target";
     # ...
 
     # Run connect command
-    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id "$servicePrincipalClientId" --service-principal-secret "$servicePrincipalSecret" --resource-group "$env:RESOURCE_GROUP" --tenant-id "$env:TENANT_ID" --location "$env:LOCATION" --subscription-id "$env:SUBSCRIPTION_ID" --cloud "$env:CLOUD" --tags "Datacenter=DC,City=Espoo" --correlation-id "$env:CORRELATION_ID";
+    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id `
+      "$servicePrincipalClientId" --service-principal-secret "$servicePrincipalSecret" `
+      --resource-group "$env:RESOURCE_GROUP" --tenant-id "$env:TENANT_ID" `
+      --location "$env:LOCATION" --subscription-id "$env:SUBSCRIPTION_ID" `
+      --cloud "$env:CLOUD" --tags "Datacenter=DC,City=Espoo" --correlation-id "$env:CORRELATION_ID";
 # ...
 ```
 
@@ -64,7 +68,11 @@ try {
     }
 
     # Run connect command
-    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id "$servicePrincipalClientId" --service-principal-secret "$servicePrincipalSecret" --resource-group "$env:RESOURCE_GROUP" --tenant-id "$env:TENANT_ID" --location "$env:LOCATION" --subscription-id "$env:SUBSCRIPTION_ID" --cloud "$env:CLOUD" --tags "$env:TAGS" --correlation-id "$env:CORRELATION_ID";
+    & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id `
+      "$servicePrincipalClientId" --service-principal-secret "$servicePrincipalSecret" `
+      --resource-group "$env:RESOURCE_GROUP" --tenant-id "$env:TENANT_ID" `
+      --location "$env:LOCATION" --subscription-id "$env:SUBSCRIPTION_ID" `
+      --cloud "$env:CLOUD" --tags "$env:TAGS" --correlation-id "$env:CORRELATION_ID";
 # ...
 ```
 

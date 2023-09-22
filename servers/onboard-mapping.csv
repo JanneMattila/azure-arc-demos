@@ -1,0 +1,4 @@
+Name;ResourceGroup;SubscriptionId;Tags
+fihesrv00010;rg-south;3ca5f54c-9e15-45e3-9be8-e922be122c24;Datacenter=DC1,City=Helsinki
+fihesrv00011;rg-south;3ca5f54c-9e15-45e3-9be8-e922be122c24;Datacenter=DC1,City=Helsinki
+fiousrv00050;rg-north;938ba7df-b539-4b68-ba55-cf37c5048d32;Datacenter=DC1,City=Oulu

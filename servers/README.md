@@ -52,6 +52,8 @@ try {
     $env:RESOURCE_GROUP = "rg-target";
     # ...
 
+    ######################
+    # This part is new-->
     $csv = Import-Csv -Path .\onboard-mapping.csv -Delimiter ';'
     $computerConfig = $csv | Where-Object -Property Name -Value $env:COMPUTERNAME -EQ
     $computerConfig
@@ -66,6 +68,8 @@ try {
         $env:TAGS = $computerConfig.Tags;
         # ...
     }
+    # <--This part is new
+    ######################
 
     # Run connect command
     & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id `

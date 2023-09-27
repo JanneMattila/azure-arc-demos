@@ -40,6 +40,10 @@ You can use Excel to edit that file content:
 
 If no mapping is found for current computer, then default configuration is used.
 
+Above configuration would mean this in practise:
+
+![Arc-enabled servers mapping to Azure subscriptions and resource groups](https://github.com/JanneMattila/azure-arc-demos/assets/2357647/9f6af770-7071-482c-befe-8a32aff9371e)
+
 And then you could use PowerShell to onboard them using the mapping file:
 
 ```powershell

@@ -44,6 +44,8 @@ Above configuration would mean this in practise:
 
 ![Arc-enabled servers mapping to Azure subscriptions and resource groups](https://github.com/JanneMattila/azure-arc-demos/assets/2357647/9f6af770-7071-482c-befe-8a32aff9371e)
 
+You should place that mapping file to location which servers can access during the provisioning e.g., network fileshare.
+
 And then you could use PowerShell to onboard them using the mapping file:
 
 ```powershell

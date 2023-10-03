@@ -59,16 +59,16 @@ try {
     # ...
 
     ######################
-    # This part is new-->
+    # NOTE: This part is new-->
     $csv = Import-Csv -Path .\onboard-mapping.csv -Delimiter ';'
     $computerConfig = $csv | Where-Object -Property Name -Value $env:COMPUTERNAME -EQ
     $computerConfig
 
     if ($null -eq $computerConfig) {
-        Write-Information "No configuration found for computer $env:COMPUTERNAME. Using default configuration."
+        Write-Host "No configuration found for computer $env:COMPUTERNAME. Using default configuration."
     }
     else {
-        Write-Information "Using configuration for computer $env:COMPUTERNAME."
+        Write-Host "Using configuration for computer $env:COMPUTERNAME."
         $env:SUBSCRIPTION_ID = $computerConfig.SubscriptionId;
         $env:RESOURCE_GROUP = $computerConfig.ResourceGroup;
         $env:TAGS = $computerConfig.Tags;
@@ -78,6 +78,7 @@ try {
     ######################
 
     # Run connect command
+    # NOTE: Add additional deployment parameters to the command->
     & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --service-principal-id `
       "$servicePrincipalClientId" --service-principal-secret "$servicePrincipalSecret" `
       --resource-group "$env:RESOURCE_GROUP" --tenant-id "$env:TENANT_ID" `

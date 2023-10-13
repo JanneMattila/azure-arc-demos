@@ -66,7 +66,7 @@ Get-AzContext
 $resourceGroupName = "rg-hcibox"
 $location = "northeurope"
 
-New-AzResourceGroup -Name $ResourceGroupName -Location $location -Verbose
+New-AzResourceGroup -Name $ResourceGroupName -Location $location -Force
 
 $result = New-AzResourceGroupDeployment `
     -ResourceGroupName $resourceGroupName `

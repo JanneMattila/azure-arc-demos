@@ -10,6 +10,12 @@
 *.userosscache
 *.sln.docstates
 
+**/azwi
+**/azwi.zip
+**/jwks.json
+**/openid-configuration.json
+**/sa.*
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

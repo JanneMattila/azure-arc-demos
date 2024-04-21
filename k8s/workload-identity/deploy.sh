@@ -146,6 +146,7 @@ helm install workload-identity-webhook azure-workload-identity/workload-identity
    --create-namespace \
    --set azureTenantID="${tenant_id}"
 
+kubectl get pods -n azure-workload-identity-system
 # helm uninstall workload-identity-webhook -n azure-workload-identity-system
 
 kubectl create ns network-app
@@ -221,11 +222,13 @@ spec:
       restartPolicy: Never
       containers:
         - name: azure-powershell-job
-          command:
-            - "/bin/sleep"
-            - "10000"
-          image: jannemattila/azure-powershell-job:1.0.4
+          image: jannemattila/azure-powershell-job:1.0.5
+          # command:
+          #   - "/bin/sleep"
+          #   - "10000"
           env:
+            # No need to set this manually, 
+            # since workload identity will automatically set it
             # - name: AZURE_CLIENT_ID
             #   value: "${client_id}"
             - name: SCRIPT_FILE
@@ -251,8 +254,19 @@ kubectl delete job azure-powershell-job -n network-app
 kubectl logs $azure_powershell_job_pod1 -n network-app
 kubectl exec --stdin --tty $azure_powershell_job_pod1 -n network-app -- pwsh
 
-Get-Content  $env:AZURE_FEDERATED_TOKEN_FILE -Raw
-Connect-AzAccount -ServicePrincipal -ApplicationId $env:AZURE_CLIENT_ID -FederatedToken $(Get-Content  $env:AZURE_FEDERATED_TOKEN_FILE -Raw) -TenantId $env:AZURE_TENANT_ID
+Get-Content $env:AZURE_FEDERATED_TOKEN_FILE -Raw
+
+$params = @{
+    ServicePrincipal = $true
+    Scope = "Process"
+    ApplicationId    = $env:AZURE_CLIENT_ID
+    Tenant           = $env:AZURE_TENANT_ID
+    FederatedToken   = Get-Content $env:AZURE_FEDERATED_TOKEN_FILE -Raw
+}
+
+Connect-AzAccount @params
+
+Get-AzResourceGroup | Format-Table
 
 exit
 

@@ -1,11 +1,4 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: network-app
-  labels:
-    app-ns: network-app
----
-apiVersion: v1
 kind: Service
 metadata:
   name: network-app-svc
@@ -15,7 +8,7 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-      nodePort: 30080
+      nodePort: 30000
   selector:
     app: network-app
 ---

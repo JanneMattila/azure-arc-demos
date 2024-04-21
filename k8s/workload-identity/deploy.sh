@@ -61,7 +61,8 @@ az storage blob upload \
    --account-name $storage_name \
   --container-name $container_name \
   --file openid-configuration.json \
-  --name .well-known/openid-configuration
+  --name .well-known/openid-configuration \
+  --overwrite
 
 # Verify that the discovery document is publicly accessible
 curl -s "https://${storage_name}.blob.core.windows.net/${container_name}/.well-known/openid-configuration"
@@ -82,20 +83,19 @@ az storage blob upload \
   --account-name $storage_name \
   --container-name $container_name \
   --file jwks.json \
-  --name openid/v1/jwks
+  --name openid/v1/jwks \
+  --overwrite
 
 # Verify that the JWKS document is publicly accessible
 curl -s "https://${storage_name}.blob.core.windows.net/${container_name}/openid/v1/jwks"
 
-# Install Mutating Admission Webhook
-tenant_id=$(az account show --query tenantId -o tsv)
-echo $tenant_id
-
 # Create a Kubernetes service account
-service_account_oidc_issuer=$(echo "https://${storage_name}.blob.core.windows.net/${container_name}/.well-known/openid-configuration")
+service_account_oidc_issuer=$(echo "https://${storage_name}.blob.core.windows.net/${container_name}/")
 service_account_key_file="$(pwd)/sa.pub"
 service_account_signing_file="$(pwd)/sa.key"
 service_account_name="workload-identity-sa"
+
+curl -s $service_account_oidc_issuer.well-known/openid-configuration
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/
 # https://hub.docker.com/r/kindest/node/tags
@@ -104,6 +104,10 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
+  extraPortMappings:
+  - containerPort: 30000
+    hostPort: 30000
+    protocol: TCP
   extraMounts:
     - hostPath: ${service_account_key_file}
       containerPath: /etc/kubernetes/pki/sa.pub
@@ -123,6 +127,7 @@ nodes:
 EOF
 
 kubectl cluster-info --context kind-azure-workload-identity
+kubectl get nodes
 
 # Create connected cluster
 az connectedk8s connect \
@@ -131,14 +136,17 @@ az connectedk8s connect \
   --location $location \
   --tags "Datacenter=Garage City=Espoo StateOrDistrict CountryOrRegion=Finland"
 
-kubectl get nodes
-
+# Install Mutating Admission Webhook
+tenant_id=$(az account show --query tenantId -o tsv)
+echo $tenant_id
 helm repo add azure-workload-identity https://azure.github.io/azure-workload-identity/charts
 helm repo update
 helm install workload-identity-webhook azure-workload-identity/workload-identity-webhook \
    --namespace azure-workload-identity-system \
    --create-namespace \
    --set azureTenantID="${tenant_id}"
+
+# helm uninstall workload-identity-webhook -n azure-workload-identity-system
 
 kubectl create ns network-app
 
@@ -158,17 +166,21 @@ az identity federated-credential create \
  --identity-name $app_identity_name \
  --resource-group $resource_group_name \
  --issuer $service_account_oidc_issuer \
- --subject "system:serviceaccount:secrets-app:$service_account_name"
+ --subject "system:serviceaccount:network-app:$service_account_name"
 
 kubectl get serviceaccount -n network-app
 kubectl describe serviceaccount -n network-app
 
 kubectl apply -f network-app.yaml
 
+kubectl get deploy -n network-app
+kubectl describe deploy network-app-deployment -n network-app
+kubectl get pod -n network-app
+
 network_app_pod1=$(kubectl get pod -n network-app -o name | head -n 1)
 echo $network_app_pod1
 
-network_app_uri="http://localhost:30080"
+network_app_uri="http://localhost:30000"
 curl $network_app_uri
 
 curl $network_app_uri/api/commands
@@ -187,7 +199,7 @@ metadata:
   name: network-app-configmap
   namespace: network-app
 data:
-  app.config: |-
+  run.ps1: |-
     Write-Output "This is example run.ps1 (from configmap)"
 
     Get-AzResourceGroup | Format-Table
@@ -209,10 +221,10 @@ spec:
       restartPolicy: Never
       containers:
         - name: azure-powershell-job
-          image: azure-powershell-job:latest
-          imagePullPolicy: IfNotPresent
-        #   image: jannemattila/azure-powershell-job:1.0.4
-        #   command: ["pwsh", "-Command", "{ Start-Sleep -Seconds 1000 }"]
+          command:
+            - "/bin/sleep"
+            - "10000"
+          image: jannemattila/azure-powershell-job:1.0.4
           env:
             # - name: AZURE_CLIENT_ID
             #   value: "${client_id}"
@@ -230,10 +242,19 @@ EOF
 
 kubectl get pods -n network-app
 kubectl get jobs -n network-app
+
+azure_powershell_job_pod1=$(kubectl get pod -n network-app -o name | head -n 1)
+echo $azure_powershell_job_pod1
+
 kubectl delete job azure-powershell-job -n network-app
 
-kubectl logs azure-powershell-job-ff66k -n network-app
-kubectl exec --stdin --tty azure-powershell-job-px64b -n network-app -- /bin/sh
+kubectl logs $azure_powershell_job_pod1 -n network-app
+kubectl exec --stdin --tty $azure_powershell_job_pod1 -n network-app -- pwsh
+
+Get-Content  $env:AZURE_FEDERATED_TOKEN_FILE -Raw
+Connect-AzAccount -ServicePrincipal -ApplicationId $env:AZURE_CLIENT_ID -FederatedToken $(Get-Content  $env:AZURE_FEDERATED_TOKEN_FILE -Raw) -TenantId $env:AZURE_TENANT_ID
+
+exit
 
 kubectl delete ns network-app
 

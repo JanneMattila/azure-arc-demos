@@ -142,9 +142,9 @@ echo $tenant_id
 helm repo add azure-workload-identity https://azure.github.io/azure-workload-identity/charts
 helm repo update
 helm install workload-identity-webhook azure-workload-identity/workload-identity-webhook \
-   --namespace azure-workload-identity-system \
-   --create-namespace \
-   --set azureTenantID="${tenant_id}"
+  --namespace azure-workload-identity-system \
+  --create-namespace \
+  --set azureTenantID="${tenant_id}"
 
 kubectl get pods -n azure-workload-identity-system
 # helm uninstall workload-identity-webhook -n azure-workload-identity-system
@@ -163,11 +163,11 @@ metadata:
 EOF
 
 az identity federated-credential create \
- --name "app-identity" \
- --identity-name $app_identity_name \
- --resource-group $resource_group_name \
- --issuer $service_account_oidc_issuer \
- --subject "system:serviceaccount:network-app:$service_account_name"
+  --name "app-identity" \
+  --identity-name $app_identity_name \
+  --resource-group $resource_group_name \
+  --issuer $service_account_oidc_issuer \
+  --subject "system:serviceaccount:network-app:$service_account_name"
 
 kubectl get serviceaccount -n network-app
 kubectl describe serviceaccount -n network-app

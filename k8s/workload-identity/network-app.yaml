@@ -46,3 +46,7 @@ spec:
             - containerPort: 8080
               name: http
               protocol: TCP
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 1.1.1.1

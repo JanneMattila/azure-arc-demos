@@ -5,7 +5,9 @@ storage_name="arck8s0000000010"
 container_name="oidc"
 location="swedencentral"
 
-az account set --subscription $subscription_id
+cd k8s/workload-identity
+
+az account set --subscription $subscription_name
 
 az group create --name $resource_group_name --location $location
 
@@ -99,7 +101,7 @@ curl -s $service_account_oidc_issuer.well-known/openid-configuration
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/
 # https://hub.docker.com/r/kindest/node/tags
-cat <<EOF | kind create cluster --name azure-workload-identity --image kindest/node:v1.22.4 --config=-
+cat <<EOF | kind create cluster --name azure-workload-identity --image kindest/node:v1.29.2 --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
@@ -173,23 +175,40 @@ kubectl get serviceaccount -n network-app
 kubectl describe serviceaccount -n network-app
 
 kubectl apply -f network-app.yaml
+# kubectl delete -f network-app.yaml
 
 kubectl get deploy -n network-app
 kubectl describe deploy network-app-deployment -n network-app
 kubectl get pod -n network-app
+kubectl describe pod -n network-app
 
 network_app_pod1=$(kubectl get pod -n network-app -o name | head -n 1)
 echo $network_app_pod1
 
+# https://github.com/docker/compose/issues/8600
+# https://github.com/docker/for-win/issues/12018
+# https://stackoverflow.com/questions/77396384/docker-desktop-running-pods-on-wsl-cannot-resolve-host-name
+# https://github.com/docker/for-win/issues/13768
+kubectl get deployment coredns -n kube-system -o yaml | grep image
+# image: registry.k8s.io/coredns/coredns:v1.11.1 -> Not working
+# kubectl patch deployment coredns -n kube-system -p '{"spec":{"template":{"spec":{"containers":[{"name":"coredns","image":"registry.k8s.io/coredns/coredns:v1.10.0"}]}}}}'
+kubectl get deployment coredns -n kube-system
+kubectl get pod -n kube-system
+
 network_app_uri="http://localhost:30000"
 curl $network_app_uri
-
 curl $network_app_uri/api/commands
 curl -X POST --data "INFO ENV" "$network_app_uri/api/commands"
 curl -X POST --data "INFO ENV AZURE_CLIENT_ID" "$network_app_uri/api/commands"
 curl -X POST --data "INFO ENV AZURE_TENANT_ID" "$network_app_uri/api/commands"
 curl -X POST --data "INFO ENV AZURE_FEDERATED_TOKEN_FILE" "$network_app_uri/api/commands"
 curl -X POST --data "INFO ENV AZURE_AUTHORITY_HOST" "$network_app_uri/api/commands"
+curl -X POST --data "IPLOOKUP bing.com" "$network_app_uri/api/commands"
+curl -X POST --data "IPLOOKUP login.microsoftonline.com" "$network_app_uri/api/commands"
+curl -X POST --data "NSLOOKUP login.microsoftonline.com" "$network_app_uri/api/commands"
+curl -X POST --data "TCP bing.com 443" "$network_app_uri/api/commands"
+curl -X POST --data "TCP login.microsoftonline.com 443" "$network_app_uri/api/commands"
+curl -X POST --data "HTTP GET \"https://login.microsoftonline.com\"" "$network_app_uri/api/commands"
 curl -X POST --data "FILE READ /var/run/secrets/azure/tokens/azure-identity-token" "$network_app_uri/api/commands"
 
 # Deploy Azure PowerShell Job
@@ -220,6 +239,10 @@ spec:
     spec:
       serviceAccountName: "${service_account_name}"
       restartPolicy: Never
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 1.1.1.1
       containers:
         - name: azure-powershell-job
           image: jannemattila/azure-powershell-job:1.0.5

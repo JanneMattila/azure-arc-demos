@@ -359,3 +359,4 @@ azure_arc.zip
 **/azure_arc/
 proxy.txt
 **/spn.json
+**/.env

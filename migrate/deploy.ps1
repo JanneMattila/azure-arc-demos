@@ -51,18 +51,19 @@ Copy-Item main.parameters.json main.parameters.json.bak
 $workspace = "log-arcbox$(Get-Random)"
 $plainTextPassword = (New-Guid).ToString() + (New-Guid).ToString().ToUpper()
 
+ssh-keygen -t rsa -b 4096 -f id_rsa
+
 # Update deployment parameters
 $configuration = Get-Content main.parameters.json | ConvertFrom-Json
 $configuration.parameters.spnClientId.value = $spn.AppId
 $configuration.parameters.spnClientSecret.value = $spn.PasswordCredentials.SecretText
 $configuration.parameters.spnTenantId.value = $spn.AppOwnerOrganizationId
+$configuration.parameters.sshRSAPublicKey.value = Get-Content id_rsa.pub
 $configuration.parameters.windowsAdminPassword.value = $plainTextPassword
 $configuration.parameters.logAnalyticsWorkspaceName.value = $workspace
 $configuration | ConvertTo-Json > main.parameters.json
 
 $configuration.parameters
-
-ssh-keygen -t rsa -b 4096 -f id_rsa
 
 $clientPassword = ConvertTo-SecureString $spn.PasswordCredentials.SecretText -AsPlainText -Force
 $credentials = New-Object System.Management.Automation.PSCredential($spn.AppId, $clientPassword)
@@ -93,7 +94,7 @@ $nsg = Get-AzNetworkSecurityGroup `
     -Name "ArcBox-NSG"
 
 $nsg | Add-AzNetworkSecurityRuleConfig `
-    -Name "Allow-RDP" `
+    -Name "Allow-Developer" `
     -Description "Allow from developer machine" `
     -Access Allow `
     -Protocol Tcp `
@@ -102,7 +103,7 @@ $nsg | Add-AzNetworkSecurityRuleConfig `
     -SourceAddressPrefix $myIP/32 `
     -SourcePortRange * `
     -DestinationAddressPrefix VirtualNetwork `
-    -DestinationPortRange 3389
+    -DestinationPortRange 22, 3389
 
 # Update the network security group
 $nsg | Set-AzNetworkSecurityGroup
@@ -116,6 +117,35 @@ $configuration.parameters.windowsAdminPassword.value
 $configuration.parameters.windowsAdminPassword.value | clip
 
 mstsc /v:$($pip.IpAddress)
+
+# Inside machine->
+# Install ssh
+Add-WindowsCapability -Online -Name OpenSSH.Server
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+
+# Allow SSH through the Windows Firewall
+New-NetFirewallRule -Name 'OpenSSH' -DisplayName 'OpenSSH' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+# <-Inside machine
+
+ssh "$($configuration.parameters.windowsAdminUsername.value)@$($pip.IpAddress)"
+
+powershell.exe
+New-Item -Path \Code -ItemType Directory -Force
+Set-Location \Code
+
+$ProgressPreference = 'SilentlyContinue'
+Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2191847" -OutFile migrate.zip
+$ProgressPreference = 'Continue'
+Expand-Archive migrate.zip -DestinationPath migrate -Force
+
+Set-Location migrate
+.\AzureMigrateInstaller.ps1
+
+exit # Exit from SSH
+
+# Azure Migrate appliance configuration manager
+# https://ArcBox-Client:44368
 
 # To save costs, you can shutdown the VM
 Stop-AzVM -ResourceGroupName $resourceGroupName -Name "ArcBox-Client" -Force

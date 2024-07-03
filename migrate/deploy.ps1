@@ -61,6 +61,7 @@ $configuration.parameters.spnTenantId.value = $spn.AppOwnerOrganizationId
 $configuration.parameters.sshRSAPublicKey.value = Get-Content id_rsa.pub
 $configuration.parameters.windowsAdminPassword.value = $plainTextPassword
 $configuration.parameters.logAnalyticsWorkspaceName.value = $workspace
+$configuration.parameters.flavor.value = "ITPro"
 $configuration | ConvertTo-Json > main.parameters.json
 
 $configuration.parameters
@@ -73,7 +74,7 @@ Connect-AzAccount -Credential $credentials -ServicePrincipal -TenantId $spn.AppO
 Get-AzContext
 
 $resourceGroupName = "rg-arcbox"
-$location = "swedencentral"
+$location = "northeurope"
 
 New-AzResourceGroup -Name $ResourceGroupName -Location $location -Force
 
@@ -128,19 +129,25 @@ Set-Service -Name sshd -StartupType 'Automatic'
 New-NetFirewallRule -Name 'OpenSSH' -DisplayName 'OpenSSH' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
 # <-Inside machine
 
-ssh "$($configuration.parameters.windowsAdminUsername.value)@$($pip.IpAddress)"
+ssh "$($configuration.parameters.windowsAdminUsername.value)@$($pip.IpAddress)" powershell
 
-powershell.exe
 New-Item -Path \Code -ItemType Directory -Force
 Set-Location \Code
 
 $ProgressPreference = 'SilentlyContinue'
+Invoke-WebRequest -Uri "https://aka.ms/migrate/script/hyperv" -OutFile MicrosoftAzureMigrate-Hyper-V.ps1
 Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2191847" -OutFile migrate.zip
+Invoke-WebRequest -Uri "https://go.microsoft.com/fwlink/?linkid=2191848" -OutFile vhd.zip
 $ProgressPreference = 'Continue'
-Expand-Archive migrate.zip -DestinationPath migrate -Force
 
-Set-Location migrate
+.\MicrosoftAzureMigrate-Hyper-V.ps1
+Expand-Archive migrate.zip -DestinationPath migrate -Force
+Expand-Archive vhd.zip -DestinationPath vhd -Force
+
+Set-Location \Code\migrate
 .\AzureMigrateInstaller.ps1
+
+Set-Location \Code\vhd
 
 exit # Exit from SSH
 

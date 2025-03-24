@@ -7,10 +7,30 @@ export tenantId="f9631ab9-69a0-4608-9ef7-dfe474720d2f";
 export location="swedencentral";
 export tags="Datacenter=DC1,City=Espoo,Country=FI,Environment=Production,Department=IT";
 
+# Mount the NFS share
+export nfsServer="your-nfs-server";
+export nfsSharePath="/path/to/nfs/share";
+export localMountPoint="/mnt/nfs";
+
 export correlationId="f5d7868b-6f65-4aa2-9118-df1c9522e322";
 export cloud="AzureCloud";
 
 export mappingFile="onboard-mapping.csv";
+
+# Create the mount point if it doesn't exist
+sudo mkdir -p $localMountPoint
+
+# Mount the NFS share
+sudo mount -t nfs $nfsServer:$nfsSharePath $localMountPoint
+
+# Check if mount was successful
+if [ $? -ne 0 ]; then
+    echo "Failed to mount NFS share. Exiting."
+    exit 1
+fi
+
+# Update the path to your mapping file
+export mappingFile="$localMountPoint/onboard-mapping.csv"
 
 # Get hostname and convert to lowercase
 export current_hostname=$(hostname | tr '[:upper:]' '[:lower:]')
@@ -48,6 +68,9 @@ echo "subscriptionId: $subscriptionId"
 echo "resourceGroup: $resourceGroup"
 echo "location: $location"
 echo "tags: $tags"
+
+# Unmount the NFS share
+sudo umount $localMountPoint
 
 LINUX_INSTALL_SCRIPT="/tmp/install_linux_azcmagent.sh"
 
